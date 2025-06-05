@@ -233,7 +233,7 @@
         if (!spieleAktiv) return;
 
         // Anzahl der Zeitungen: mit steigendem Punktestand mehr (max 5)
-        let maxZeitungen = Math.min(1 + Math.floor(punkte / 2),2);
+        let maxZeitungen = Math.min(1 + Math.floor(punkte / 1),1);
         const anzahl = Math.floor(Math.random() * maxZeitungen) + 1;
 
         for (let i = 0; i < anzahl; i++) {
