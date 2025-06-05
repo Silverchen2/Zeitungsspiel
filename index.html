@@ -23,6 +23,15 @@
   border-radius: 10px;     /* Optional: abgerundete Ecken */
   background: radial-gradient(ellipse at center, rgba(100, 120, 180, 0.2), rgba(30, 30, 60, 0.3));
     }
+    document.addEventListener("mousemove", (e) => {
+  const rect = spielbereich.getBoundingClientRect();
+  let x = e.clientX - rect.left; // Position relativ zum Spielfeld
+
+  // Begrenzen, damit Spieler nicht raus geht
+  x = Math.max(0, Math.min(x, rect.width));
+
+  spieler.style.left = x + "px";
+});
 
     #startscreen {
       position: absolute;
