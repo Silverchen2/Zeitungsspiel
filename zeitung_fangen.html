@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Zeitung fangen!</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: radial-gradient(ellipse at center, rgba(100, 120, 180, 0.2), rgba(30, 30, 60, 0.3));
+      overflow: hidden;
+      color: white;
+    }
+
+    #spielbereich {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    #startscreen {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 50, 0.6);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      z-index: 2;
+    }
+
+    #startscreen h1 {
+      font-size: 28px;
+      margin-bottom: 20px;
+      max-width: 80%;
+    }
+
+    #startbutton, #restartbutton {
+      padding: 12px 24px;
+      font-size: 18px;
+      background-color: white;
+      color: black;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    #spieler {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 48px;
+      pointer-events: none;
+    }
+
+    .zeitung {
+      position: absolute;
+      top: -50px;
+      font-size: 36px;
+      pointer-events: none;
+    }
+
+    #punkte, #leben {
+      position: absolute;
+      top: 10px;
+      font-size: 20px;
+      font-weight: bold;
+    }
+
+    #punkte {
+      left: 10px;
+    }
+
+    #leben {
+      right: 10px;
+    }
+
+    #gameover {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 32px;
+      font-weight: bold;
+      background-color: rgba(255,255,255,0.95);
+      color: black;
+      padding: 20px;
+      border: 2px solid black;
+      border-radius: 8px;
+      display: none;
+      z-index: 3;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div id="spielbereich">
+    <div id="startscreen">
+      <h1>Hilf uns die Zeitungen aufzufangen,<br>bevor sie alle weggeweht werden!</h1>
+      <button id="startbutton">Los geht’s!</button>
+    </div>
+
+    <div id="spieler" style="display: none;">🧺</div>
+    <div id="punkte" style="display: none;">Punkte: 0</div>
+    <div id="leben" style="display: none;">❤️❤️❤️</div>
+    <div id="gameover">
+      Spiel vorbei!<br>Punkte: <span id="endstand"></span><br>
+      <button id="restartbutton">Erneut spielen</button>
+    </div>
+  </div>
+
+  <script>
+    const spielbereich = document.getElementById("spielbereich");
+    const spieler = document.getElementById("spieler");
+    const punkteAnzeige = document.getElementById("punkte");
+    const lebenAnzeige = document.getElementById("leben");
+    const gameoverAnzeige = document.getElementById("gameover");
+    const endstand = document.getElementById("endstand");
+    const startscreen = document.getElementById("startscreen");
+    const startbutton = document.getElementById("startbutton");
+    const restartbutton = document.getElementById("restartbutton");
+
+    let punkte = 0;
+    let leben = 3;
+    let geschwindigkeit = 4;
+    let spawnRate = 800;
+    let spieleAktiv = false;
+    let spawnInterval;
+
+    document.addEventListener("mousemove", (e) => {
+      spieler.style.left = e.clientX + "px";
+    });
+
+    function updateLeben() {
+      lebenAnzeige.textContent = "❤️".repeat(leben);
+    }
+
+    function spielBeenden() {
+      spieleAktiv = false;
+      gameoverAnzeige.style.display = "block";
+      endstand.textContent = punkte;
+    }
+
+    function erstelleZeitung() {
+      if (!spieleAktiv) return;
+
+      const zeitung = document.createElement("div");
+      zeitung.classList.add("zeitung");
+      zeitung.textContent = "🗞️";
+      zeitung.style.left = Math.random() * (window.innerWidth - 40) + "px";
+      spielbereich.appendChild(zeitung);
+
+      let pos = 0;
+      const fallIntervall = setInterval(() => {
+        if (!spieleAktiv) {
+          zeitung.remove();
+          clearInterval(fallIntervall);
+          return;
+        }
+
+        pos += geschwindigkeit;
+        zeitung.style.top = pos + "px";
+
+        const zeitungRect = zeitung.getBoundingClientRect();
+        const spielerRect = spieler.getBoundingClientRect();
+
+        if (
+          zeitungRect.bottom >= spielerRect.top &&
+          zeitungRect.left < spielerRect.right &&
+          zeitungRect.right > spielerRect.left
+        ) {
+          punkte++;
+          punkteAnzeige.textContent = "Punkte: " + punkte;
+          zeitung.remove();
+          clearInterval(fallIntervall);
+
+          geschwindigkeit += 0.05;
+          if (spawnRate > 100) spawnRate -= 5;
+        }
+
+        if (pos > window.innerHeight) {
+          zeitung.remove();
+          clearInterval(fallIntervall);
+          leben--;
+          updateLeben();
+          if (leben <= 0) {
+            spielBeenden();
+          }
+        }
+      }, 20);
+    }
+
+    function startSpiel() {
+      spieleAktiv = true;
+      punkte = 0;
+      leben = 3;
+      geschwindigkeit = 4;
+      spawnRate = 800;
+
+      punkteAnzeige.textContent = "Punkte: 0";
+      updateLeben();
+      gameoverAnzeige.style.display = "none";
+
+      function spawnLoop() {
+        if (!spieleAktiv) return;
+        // Spawnt 1–3 Zeitungen gleichzeitig
+        const anzahl = Math.floor(Math.random() * 2) + 1;
+        for (let i = 0; i < anzahl; i++) {
+          erstelleZeitung();
+        }
+        setTimeout(spawnLoop, spawnRate);
+      }
+
+      spawnLoop();
+    }
+
+    startbutton.addEventListener("click", () => {
+      startscreen.style.display = "none";
+      spieler.style.display = "block";
+      punkteAnzeige.style.display = "block";
+      lebenAnzeige.style.display = "block";
+      startSpiel();
+    });
+
+    restartbutton.addEventListener("click", () => {
+      gameoverAnzeige.style.display = "none";
+      startSpiel();
+    });
+  </script>
+</body>
+</html>
