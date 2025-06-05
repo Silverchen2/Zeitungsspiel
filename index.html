@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
@@ -15,23 +15,14 @@
 
     #spielbereich {
       position: relative;
-  width: 600px;    /* Breite auf 600 Pixel */
-  height: 400px;   /* Höhe auf 400 Pixel */
-  overflow: hidden;
-  margin: 40px auto; /* zentriert das Spielfeld horizontal mit etwas Abstand oben/unten */
-  border: 2px solid white; /* Optional: damit man Spielfeld sieht */
-  border-radius: 10px;     /* Optional: abgerundete Ecken */
-  background: radial-gradient(ellipse at center, rgba(100, 120, 180, 0.2), rgba(30, 30, 60, 0.3));
+      width: 600px;    /* Spielfeld-Breite */
+      height: 400px;   /* Spielfeld-Höhe */
+      overflow: hidden;
+      margin: 40px auto; /* Spielfeld zentrieren */
+      border: 2px solid white;
+      border-radius: 10px;
+      background: radial-gradient(ellipse at center, rgba(100, 120, 180, 0.2), rgba(30, 30, 60, 0.15));
     }
-    document.addEventListener("mousemove", (e) => {
-  const rect = spielbereich.getBoundingClientRect();
-  let x = e.clientX - rect.left; // Position relativ zum Spielfeld
-
-  // Begrenzen, damit Spieler nicht raus geht
-  x = Math.max(0, Math.min(x, rect.width));
-
-  spieler.style.left = x + "px";
-});
 
     #startscreen {
       position: absolute;
@@ -70,6 +61,7 @@
       transform: translateX(-50%);
       font-size: 48px;
       pointer-events: none;
+      user-select: none;
     }
 
     .zeitung {
@@ -77,6 +69,7 @@
       top: -50px;
       font-size: 36px;
       pointer-events: none;
+      user-select: none;
     }
 
     #punkte, #leben {
@@ -84,6 +77,7 @@
       top: 10px;
       font-size: 20px;
       font-weight: bold;
+      user-select: none;
     }
 
     #punkte {
@@ -109,6 +103,7 @@
       display: none;
       z-index: 3;
       text-align: center;
+      user-select: none;
     }
   </style>
 </head>
@@ -144,10 +139,18 @@
     let geschwindigkeit = 4;
     let spawnRate = 800;
     let spieleAktiv = false;
-    let spawnInterval;
 
+    // Mausbewegung relativ zum Spielfeld
     document.addEventListener("mousemove", (e) => {
-      spieler.style.left = e.clientX + "px";
+      if (!spieleAktiv) return;
+
+      const rect = spielbereich.getBoundingClientRect();
+      let x = e.clientX - rect.left;
+
+      // Grenzen setzen, damit Korb nicht aus Spielfeld rausgeht
+      x = Math.max(0, Math.min(x, rect.width));
+
+      spieler.style.left = x + "px";
     });
 
     function updateLeben() {
@@ -166,10 +169,13 @@
       const zeitung = document.createElement("div");
       zeitung.classList.add("zeitung");
       zeitung.textContent = "🗞️";
-      zeitung.style.left = Math.random() * (window.innerWidth - 40) + "px";
+
+      // Innerhalb Spielfeld-Breite positionieren
+      zeitung.style.left = Math.random() * (spielbereich.clientWidth - 40) + "px";
       spielbereich.appendChild(zeitung);
 
-      let pos = 0;
+      let pos = -50; // Startposition etwas über Spielfeld
+
       const fallIntervall = setInterval(() => {
         if (!spieleAktiv) {
           zeitung.remove();
@@ -183,6 +189,7 @@
         const zeitungRect = zeitung.getBoundingClientRect();
         const spielerRect = spieler.getBoundingClientRect();
 
+        // Kollisionserkennung
         if (
           zeitungRect.bottom >= spielerRect.top &&
           zeitungRect.left < spielerRect.right &&
@@ -193,11 +200,13 @@
           zeitung.remove();
           clearInterval(fallIntervall);
 
-          geschwindigkeit += 0.25;
-          if (spawnRate > 100) spawnRate -= 5;
+          // Schwierigkeit etwas erhöhen (Geschwindigkeit + Spawnrate)
+          geschwindigkeit += 0.15;
+          if (spawnRate > 200) spawnRate -= 10;
         }
 
-        if (pos > window.innerHeight) {
+        // Zeitung unten rausgefallen
+        if (pos > spielbereich.clientHeight) {
           zeitung.remove();
           clearInterval(fallIntervall);
           leben--;
@@ -213,8 +222,8 @@
       spieleAktiv = true;
       punkte = 0;
       leben = 3;
-      geschwindigkeit = 5;
-      spawnRate = 850;
+      geschwindigkeit = 4;
+      spawnRate = 800;
 
       punkteAnzeige.textContent = "Punkte: 0";
       updateLeben();
@@ -222,11 +231,15 @@
 
       function spawnLoop() {
         if (!spieleAktiv) return;
-        // Spawnt 1–3 Zeitungen gleichzeitig
-        const anzahl = Math.floor(Math.random() *1) + 1;
+
+        // Anzahl der Zeitungen: mit steigendem Punktestand mehr (max 5)
+        let maxZeitungen = Math.min(1 + Math.floor(punkte / 3),3);
+        const anzahl = Math.floor(Math.random() * maxZeitungen) + 1;
+
         for (let i = 0; i < anzahl; i++) {
           erstelleZeitung();
         }
+
         setTimeout(spawnLoop, spawnRate);
       }
 
@@ -245,6 +258,10 @@
       gameoverAnzeige.style.display = "none";
       startSpiel();
     });
+  </script>
+</body>
+</html>
+
   </script>
 </body>
 </html>
