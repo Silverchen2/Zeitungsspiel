@@ -201,7 +201,7 @@
           clearInterval(fallIntervall);
 
           // Schwierigkeit etwas erhöhen (Geschwindigkeit + Spawnrate)
-          geschwindigkeit += 0.15;
+          geschwindigkeit += 0.25;
           if (spawnRate > 200) spawnRate -= 10;
         }
 
@@ -233,7 +233,7 @@
         if (!spieleAktiv) return;
 
         // Anzahl der Zeitungen: mit steigendem Punktestand mehr (max 5)
-        let maxZeitungen = Math.min(1 + Math.floor(punkte / 3),3);
+        let maxZeitungen = Math.min(1 + Math.floor(punkte / 2),2);
         const anzahl = Math.floor(Math.random() * maxZeitungen) + 1;
 
         for (let i = 0; i < anzahl; i++) {
