@@ -1,8 +1,8 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Zeitung fangen!</title>
   <style>
     body {
@@ -12,18 +12,16 @@
       overflow: hidden;
       color: white;
     }
-
     #spielbereich {
       position: relative;
-      width: 600px;    /* Spielfeld-Breite */
-      height: 400px;   /* Spielfeld-Höhe */
+      width: 600px;
+      height: 400px;
       overflow: hidden;
-      margin: 40px auto; /* Spielfeld zentrieren */
+      margin: 40px auto;
       border: 2px solid white;
       border-radius: 10px;
       background: radial-gradient(ellipse at center, rgba(100, 120, 180, 0.2), rgba(30, 30, 60, 0.15));
     }
-
     #startscreen {
       position: absolute;
       width: 100%;
@@ -36,13 +34,11 @@
       text-align: center;
       z-index: 2;
     }
-
     #startscreen h1 {
       font-size: 28px;
       margin-bottom: 20px;
       max-width: 80%;
     }
-
     #startbutton, #restartbutton {
       padding: 12px 24px;
       font-size: 18px;
@@ -53,7 +49,6 @@
       cursor: pointer;
       margin-top: 10px;
     }
-
     #spieler {
       position: absolute;
       bottom: 10px;
@@ -63,7 +58,6 @@
       pointer-events: none;
       user-select: none;
     }
-
     .zeitung {
       position: absolute;
       top: -50px;
@@ -71,7 +65,6 @@
       pointer-events: none;
       user-select: none;
     }
-
     #punkte, #leben {
       position: absolute;
       top: 10px;
@@ -79,21 +72,18 @@
       font-weight: bold;
       user-select: none;
     }
-
     #punkte {
       left: 10px;
     }
-
     #leben {
       right: 10px;
     }
-
     #gameover {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      font-size: 32px;
+      font-size: 20px;
       font-weight: bold;
       background-color: rgba(255,255,255,0.95);
       color: black;
@@ -104,6 +94,18 @@
       z-index: 3;
       text-align: center;
       user-select: none;
+      max-width: 90%;
+      max-height: 80%;
+      overflow-y: auto;
+    }
+    #rangliste {
+      margin-top: 10px;
+      color: black;
+      text-align: left;
+    }
+    #rangliste ol {
+      padding-left: 20px;
+      margin: 0;
     }
   </style>
 </head>
@@ -118,213 +120,176 @@
     <div id="punkte" style="display: none;">Punkte: 0</div>
     <div id="leben" style="display: none;">❤️❤️❤️</div>
     <div id="gameover">
-      Spiel vorbei!<br>Punkte: <span id="endstand"></span><br>
+      <div>Spiel vorbei!<br>Punkte: <span id="endstand"></span></div>
+      <div id="rangliste"><strong>Top 5 Spieler:innen:</strong><ol></ol></div>
       <button id="restartbutton">Erneut spielen</button>
     </div>
   </div>
 
-  <script>
-    const spielbereich = document.getElementById("spielbereich");
-    const spieler = document.getElementById("spieler");
-    const punkteAnzeige = document.getElementById("punkte");
-    const lebenAnzeige = document.getElementById("leben");
-    const gameoverAnzeige = document.getElementById("gameover");
-    const endstand = document.getElementById("endstand");
-    const startscreen = document.getElementById("startscreen");
-    const startbutton = document.getElementById("startbutton");
-    const restartbutton = document.getElementById("restartbutton");
+<script>
+  const spielbereich = document.getElementById("spielbereich");
+  const spieler = document.getElementById("spieler");
+  const punkteAnzeige = document.getElementById("punkte");
+  const lebenAnzeige = document.getElementById("leben");
+  const gameoverAnzeige = document.getElementById("gameover");
+  const endstand = document.getElementById("endstand");
+  const startscreen = document.getElementById("startscreen");
+  const startbutton = document.getElementById("startbutton");
+  const restartbutton = document.getElementById("restartbutton");
+  const ranglisteOl = document.querySelector("#rangliste ol");
 
-    let punkte = 0;
-    let leben = 3;
-    let geschwindigkeit = 4;
-    let spawnRate = 800;
-    let spieleAktiv = false;
+  // Dein Google Apps Script URL:
+  const googleScriptURL = "https://script.google.com/macros/s/AKfycbzrSuWG5K_ayANKdtrXztYh_piK-wvfWO1v0dAXn6lVCYeMhguBI2bAT48b_uckWCM4/exec";
 
-    // Mausbewegung relativ zum Spielfeld
-    document.addEventListener("mousemove", (e) => {
-      if (!spieleAktiv) return;
+  let punkte = 0;
+  let leben = 3;
+  let geschwindigkeit = 4;
+  let spawnRate = 800;
+  let spieleAktiv = false;
 
-      const rect = spielbereich.getBoundingClientRect();
-      let x = e.clientX - rect.left;
+  // Zufälliger Name-Generator (für Score-Einträge)
+  function generiereNamen() {
+    const adjektive = [
+      "Flinke", "Listige", "Lautlose", "Rasende", "Neugierige", "Schnüffelnde", "Unermüdliche", "Tippende",
+      "Wachsame", "Geheime", "Eilige", "Witzige", "Smarte", "Taktische", "Wilde", "Schlaue", "Mutige", "Verschnupfte",
+      "Tintenreiche", "Verwirrte", "Nostalgische", "Retrohafte", "Analoge", "Digitale", "Kritische", "Gewitzte"
+    ];
+    const namen = [
+      "Zeitungskatze", "Druckteufel", "Blattlaus", "Nachrichtengeist", "Spaltengeist", "Zeilenfuchs", "Tintenmolch",
+      "Presseeule", "Kolumnenkobold", "Layoutgeist", "Schlagzeilenhai", "Artikelkrake", "Textritter",
+      "Anzeigenwichtel", "Druckdrache", "Redaktionskrabbe", "Lesemurmeltier", "Papiergeist", "Headlinehase",
+      "Formatferkel", "Satzspinne", "Archivgnom", "Rollenhamster"
+    ];
+    const zahl = Math.floor(Math.random() * 100);
+    return `${adjektive[Math.floor(Math.random() * adjektive.length)]}${namen[Math.floor(Math.random() * namen.length)]}${zahl}`;
+  }
 
-      // Grenzen setzen, damit Korb nicht aus Spielfeld rausgeht
-      x = Math.max(0, Math.min(x, rect.width));
+  document.addEventListener("mousemove", (e) => {
+    if (!spieleAktiv) return;
+    const rect = spielbereich.getBoundingClientRect();
+    let x = e.clientX - rect.left;
+    x = Math.max(0, Math.min(x, rect.width));
+    spieler.style.left = x + "px";
+  });
 
-      spieler.style.left = x + "px";
-    });
+  function updateLeben() {
+    lebenAnzeige.textContent = "❤️".repeat(leben);
+  }
 
-    function updateLeben() {
-      lebenAnzeige.textContent = "❤️".repeat(leben);
-    }
+  function erstelleZeitung() {
+    if (!spieleAktiv) return;
+    const zeitung = document.createElement("div");
+    zeitung.classList.add("zeitung");
+    zeitung.textContent = "🗞️";
+    zeitung.style.left = Math.random() * (spielbereich.clientWidth - 40) + "px";
+    spielbereich.appendChild(zeitung);
 
-    function spielBeenden() {
-      spieleAktiv = false;
-      gameoverAnzeige.style.display = "block";
-      endstand.textContent = punkte;
-    }
+    let pos = -50;
+    const fallIntervall = setInterval(() => {
+      if (!spieleAktiv) {
+        zeitung.remove();
+        clearInterval(fallIntervall);
+        return;
+      }
+      pos += geschwindigkeit;
+      zeitung.style.top = pos + "px";
 
-    function erstelleZeitung() {
-      if (!spieleAktiv) return;
+      const zeitungRect = zeitung.getBoundingClientRect();
+      const spielerRect = spieler.getBoundingClientRect();
 
-      const zeitung = document.createElement("div");
-      zeitung.classList.add("zeitung");
-      zeitung.textContent = "🗞️";
-
-      // Innerhalb Spielfeld-Breite positionieren
-      zeitung.style.left = Math.random() * (spielbereich.clientWidth - 40) + "px";
-      spielbereich.appendChild(zeitung);
-
-      let pos = -50; // Startposition etwas über Spielfeld
-
-      const fallIntervall = setInterval(() => {
-        if (!spieleAktiv) {
-          zeitung.remove();
-          clearInterval(fallIntervall);
-          return;
-        }
-
-        pos += geschwindigkeit;
-        zeitung.style.top = pos + "px";
-
-        const zeitungRect = zeitung.getBoundingClientRect();
-        const spielerRect = spieler.getBoundingClientRect();
-
-        // Kollisionserkennung
-        if (
-          zeitungRect.bottom >= spielerRect.top &&
-          zeitungRect.left < spielerRect.right &&
-          zeitungRect.right > spielerRect.left
-        ) {
-          punkte++;
-          punkteAnzeige.textContent = "Punkte: " + punkte;
-          zeitung.remove();
-          clearInterval(fallIntervall);
-
-          // Schwierigkeit etwas erhöhen (Geschwindigkeit + Spawnrate)
-          geschwindigkeit += 0.25;
-          if (spawnRate > 200) spawnRate -= 10;
-        }
-
-        // Zeitung unten rausgefallen
-        if (pos > spielbereich.clientHeight) {
-          zeitung.remove();
-          clearInterval(fallIntervall);
-          leben--;
-          updateLeben();
-          if (leben <= 0) {
-            spielBeenden();
-          }
-        }
-      }, 20);
-    }
-
-    function startSpiel() {
-      spieleAktiv = true;
-      punkte = 0;
-      leben = 3;
-      geschwindigkeit = 4;
-      spawnRate = 800;
-
-      punkteAnzeige.textContent = "Punkte: 0";
-      updateLeben();
-      gameoverAnzeige.style.display = "none";
-
-      function spawnLoop() {
-        if (!spieleAktiv) return;
-
-        // Anzahl der Zeitungen: mit steigendem Punktestand mehr (max 5)
-        let maxZeitungen = Math.min(1 + Math.floor(punkte / 1),1);
-        const anzahl = Math.floor(Math.random() * maxZeitungen) + 1;
-
-        for (let i = 0; i < anzahl; i++) {
-          erstelleZeitung();
-        }
-
-        setTimeout(spawnLoop, spawnRate);
+      if (
+        zeitungRect.bottom >= spielerRect.top &&
+        zeitungRect.left < spielerRect.right &&
+        zeitungRect.right > spielerRect.left
+      ) {
+        punkte++;
+        punkteAnzeige.textContent = "Punkte: " + punkte;
+        zeitung.remove();
+        clearInterval(fallIntervall);
+        geschwindigkeit += 0.25;
+        if (spawnRate > 200) spawnRate -= 10;
       }
 
-      spawnLoop();
+      if (pos > spielbereich.clientHeight) {
+        zeitung.remove();
+        clearInterval(fallIntervall);
+        leben--;
+        updateLeben();
+        if (leben <= 0) {
+          spielBeenden();
+        }
+      }
+    }, 20);
+  }
+
+  function spawnLoop() {
+    if (!spieleAktiv) return;
+    let maxZeitungen = Math.min(1 + Math.floor(punkte / 1), 1);
+    const anzahl = Math.floor(Math.random() * maxZeitungen) + 1;
+    for (let i = 0; i < anzahl; i++) {
+      erstelleZeitung();
     }
-
-    startbutton.addEventListener("click", () => {
-      startscreen.style.display = "none";
-      spieler.style.display = "block";
-      punkteAnzeige.style.display = "block";
-      lebenAnzeige.style.display = "block";
-      startSpiel();
-    });
-
-    restartbutton.addEventListener("click", () => {
-      gameoverAnzeige.style.display = "none";
-      startSpiel();
-    });
-  </script>
-</body>
-</html>
-
-  </script>
-<script>
-  const ranglisteContainer = document.createElement("div");
-  ranglisteContainer.style.margin = "20px auto";
-  ranglisteContainer.style.width = "800px";
-  ranglisteContainer.style.fontFamily = "sans-serif";
-  ranglisteContainer.style.textAlign = "left";
-  document.body.appendChild(ranglisteContainer);
-
- function generiereNamen() {
-  const adjektive = [
-    "Flinke", "Listige", "Lautlose", "Rasende", "Neugierige", "Schnüffelnde", "Unermüdliche", "Tippende",
-    "Wachsame", "Geheime", "Eilige", "Witzige", "Smarte", "Taktische", "Wilde", "Schlaue", "Mutige", "Verschnupfte",
-    "Tintenreiche", "Verwirrte", "Nostalgische", "Retrohafte", "Analoge", "Digitale", "Kritische", "Gewitzte"
-  ];
-
-  const namen = [
-    "Zeitungskatze", "Druckteufel", "Blattlaus", "Nachrichtengeist", "Spaltengeist", "Zeilenfuchs", "Tintenmolch",
-    "Presseeule", "Kolumnenkobold", "Layoutgeist", "Kioskschatten", "Schlagzeilenhai", "Artikelkrake", "Textritter",
-    "Anzeigenwichtel", "Druckdrache", "Redaktionskrabbe", "Lesemurmeltier", "Papiergeist", "Headlinehase",
-    "Formatferkel", "Satzspinne", "Archivgnom", "Rollenhamster", "Klickkobold", "Scrollkrake", "Feuilletonfuchs"
-  ];
-
-  const zahl = Math.floor(Math.random() * 100);
-  const name = `${adjektive[Math.floor(Math.random() * adjektive.length)]}${namen[Math.floor(Math.random() * namen.length)]}${zahl}`;
-  return name;
-}
-
+    setTimeout(spawnLoop, spawnRate);
   }
 
-  function ladeRangliste() {
-    const daten = JSON.parse(localStorage.getItem("zeitungsHighscores")) || [];
-    return daten.sort((a, b) => b.score - a.score).slice(0, 5);
+  function startSpiel() {
+    spieleAktiv = true;
+    punkte = 0;
+    leben = 3;
+    geschwindigkeit = 4;
+    spawnRate = 800;
+    punkteAnzeige.textContent = "Punkte: 0";
+    updateLeben();
+    gameoverAnzeige.style.display = "none";
+    spawnLoop();
   }
 
-  function speichereScore(score) {
+  // Highscore laden von Google Script
+  async function ladeRangliste() {
+    try {
+      const res = await fetch(googleScriptURL);
+      if (!res.ok) throw new Error("Fehler beim Laden der Rangliste");
+      const daten = await res.json();
+      return daten.sort((a, b) => b.score - a.score).slice(0, 5);
+    } catch (e) {
+      console.error(e);
+      return [];
+    }
+  }
+
+  // Highscore speichern via Google Script
+  async function speichereScore(score) {
     const name = generiereNamen();
-    const daten = ladeRangliste();
-    daten.push({ name, score });
-    localStorage.setItem("zeitungsHighscores", JSON.stringify(daten));
-    zeigeRangliste();
+    try {
+      await fetch(googleScriptURL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, score })
+      });
+    } catch (e) {
+      console.error("Fehler beim Speichern:", e);
+    }
   }
 
-  function zeigeRangliste() {
-    const daten = ladeRangliste();
-    ranglisteContainer.innerHTML = "<h3>📰 Top 5 Leser:innen</h3><ol>" +
-      daten.map(e => `<li>${e.name}: ${e.score} Punkte</li>`).join("") +
-      "</ol>";
+  async function zeigeRangliste() {
+    const daten = await ladeRangliste();
+    if (daten.length === 0) {
+      ranglisteOl.innerHTML = "<li>Keine Einträge</li>";
+      return;
+    }
+    ranglisteOl.innerHTML = daten
+      .map(e => `<li>${e.name}: ${e.score} Punkte</li>`)
+      .join("");
   }
 
-  // Zeige Rangliste beim Start
-  zeigeRangliste();
-
-  // Ergänze gameover-Funktion
-  function gameOverMitRangliste() {
+  async function spielBeenden() {
     spieleAktiv = false;
-    gameover.style.display = "block";
-    speichereScore(punkte);
+    punkteAnzeige.textContent = "Punkte: " + punkte;
+    endstand.textContent = punkte;
+    gameoverAnzeige.style.display = "block";
+    await speichereScore(punkte);
+    await zeigeRangliste();
   }
 
-  // Ersetze im Spielcode an der Stelle `spieleAktiv = false; gameover.style.display = "block";` durch:
-  // --> gameOverMitRangliste();
-</script>
+  startbutton
 
-</body>
-</html>
