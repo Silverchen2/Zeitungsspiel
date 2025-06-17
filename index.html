@@ -75,7 +75,7 @@
       user-select: none;
     }
 
-    #punkte, #leben, #spielername-anzeige { /* NEU: spielername-anzeige hinzugefügt */
+    #punkte, #leben, #spielername-anzeige {
       position: absolute;
       top: 10px;
       font-size: 20px;
@@ -87,7 +87,6 @@
       left: 10px;
     }
     
-    /* NEU: Styling für die Namensanzeige */
     #spielername-anzeige {
         left: 50%;
         transform: translateX(-50%);
@@ -165,30 +164,28 @@
     const startbutton = document.getElementById("startbutton");
     const restartbutton = document.getElementById("restartbutton");
     const ranglisteContainer = document.getElementById("ranglisteContainer");
-    const spielernameAnzeige = document.getElementById("spielername-anzeige"); // NEU
+    const spielernameAnzeige = document.getElementById("spielername-anzeige");
 
     let punkte = 0;
     let leben = 3;
-    let geschwindigkeit = 3; // Leicht reduziert für den Start mit requestAnimationFrame
-    let spawnRate = 900;
+    let geschwindigkeit = 3;
+    let spawnRate = 1200; // Etwas höherer Startwert, da es direkt losgeht
     let spieleAktiv = false;
     let spawnInterval;
-    let aktuellerSpielerName = ''; // NEU: Variable für den Namen der aktuellen Runde
+    let aktuellerSpielerName = '';
 
     // --- RANGISTEN-FUNKTIONEN ---
     const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbyfyb2NhgjB7HNhBTBZukdfM63-nDkxq6PKncbD25__Wo6mg3Q1ka-aTS4qJINbu0HE/exec';
 
-    // GEÄNDERT: Namen ohne Zahlen
     function generiereNamen() {
         const adjektive = ["Flinke", "Listige", "Rasende", "Smarte", "Wilde", "Schlaue", "Eilige", "Witzige", "Mutige", "Geheime"];
         const namen = ["Zeitungskatze", "Druckteufel", "Blattlaus", "Nachrichtengeist", "Zeilenfuchs", "Tintenmolch", "Headlinehase", "Textritter"];
         return adjektive[Math.floor(Math.random() * adjektive.length)] + namen[Math.floor(Math.random() * namen.length)];
     }
 
-    // GEÄNDERT: Verwendet den zu Beginn generierten Namen
     async function speichereScore(neuerScore) {
         if (neuerScore === 0) return;
-        const name = aktuellerSpielerName; // Verwendet den gespeicherten Namen
+        const name = aktuellerSpielerName;
         try {
             await fetch(BACKEND_URL, {
                 method: 'POST', mode: 'no-cors', cache: 'no-cache',
@@ -242,17 +239,8 @@
       speichereScore(punkte);
     }
     
-    function spawnWelle() {
-        if (!spieleAktiv) return;
-        let anzahl = 1;
-        if (punkte > 10 && Math.random() < 0.3) anzahl = 2;
-        if (punkte > 25 && Math.random() < 0.2) anzahl = 3;
-        for (let i = 0; i < anzahl; i++) {
-            setTimeout(erstelleZeitung, i * 150);
-        }
-    }
-
-    // GEÄNDERT: Nutzt jetzt requestAnimationFrame für flüssige Bewegungen
+    // Die Funktion erstelleZeitung bleibt gleich und nutzt weiterhin
+    // requestAnimationFrame für eine flüssige Bewegung.
     function erstelleZeitung() {
       if (!spieleAktiv) return;
 
@@ -264,9 +252,8 @@
 
       let pos = -50;
       
-      // Die neue Animations-Schleife
       function fallAnimation() {
-        if (!spieleAktiv) { // Spiel wurde beendet, Animation stoppen
+        if (!spieleAktiv) {
             zeitung.remove();
             return;
         }
@@ -277,17 +264,18 @@
         const zeitungRect = zeitung.getBoundingClientRect();
         const spielerRect = spieler.getBoundingClientRect();
 
-        // Kollisionserkennung
         if (zeitungRect.bottom >= spielerRect.top && zeitungRect.left < spielerRect.right && zeitungRect.right > spielerRect.left && zeitungRect.top < spielerRect.bottom) {
           punkte++;
           punkteAnzeige.textContent = "Punkte: " + punkte;
           zeitung.remove();
-          geschwindigkeit += 0.1; // Kleinere Anpassung, da es jetzt flüssiger ist
-          if (spawnRate > 300) spawnRate -= 10;
-          return; // Animation für diese Zeitung beenden
+          geschwindigkeit += 0.05; // Leichte Erhöhung der Fallgeschwindigkeit
+          if (spawnRate > 250) spawnRate -= 20; // Stärkere Verkürzung der Spawn-Zeit
+          // Wichtig: Wir müssen den bestehenden Intervall stoppen und mit der neuen, schnelleren Rate neu starten
+          clearInterval(spawnInterval);
+          spawnInterval = setInterval(erstelleZeitung, spawnRate);
+          return;
         }
         
-        // Zeitung unten rausgefallen
         if (pos > spielbereich.clientHeight) {
           zeitung.remove();
           leben--;
@@ -295,17 +283,14 @@
           if (leben <= 0) {
             spielBeenden();
           }
-          return; // Animation für diese Zeitung beenden
+          return;
         }
-
-        // Nächsten Frame anfordern
         requestAnimationFrame(fallAnimation);
       }
-      
-      // Starte die Animation
       requestAnimationFrame(fallAnimation);
     }
 
+    // Die startSpiel-Funktion wird wieder vereinfacht.
     function startSpiel() {
       document.querySelectorAll('.zeitung').forEach(z => z.remove());
       
@@ -313,9 +298,8 @@
       punkte = 0;
       leben = 3;
       geschwindigkeit = 3;
-      spawnRate = 900;
+      spawnRate = 1200;
       
-      // NEU: Name wird beim Spielstart generiert und angezeigt
       aktuellerSpielerName = generiereNamen();
       spielernameAnzeige.textContent = `Viel Glück, ${aktuellerSpielerName}!`;
       
@@ -323,7 +307,10 @@
       updateLeben();
       gameoverAnzeige.style.display = "none";
       
-      spawnInterval = setInterval(spawnWelle, spawnRate);
+      // GEÄNDERT: Stoppt den alten Intervall (falls vorhanden) und startet den neuen
+      // Es wird jetzt direkt wieder erstelleZeitung aufgerufen
+      clearInterval(spawnInterval);
+      spawnInterval = setInterval(erstelleZeitung, spawnRate);
     }
 
     startbutton.addEventListener("click", () => {
@@ -331,12 +318,11 @@
       spieler.style.display = "block";
       punkteAnzeige.style.display = "block";
       lebenAnzeige.style.display = "block";
-      spielernameAnzeige.style.display = "block"; // NEU
+      spielernameAnzeige.style.display = "block";
       startSpiel();
     });
 
     restartbutton.addEventListener("click", () => {
-        // NEU: Namensanzeige auch beim Neustart anzeigen
         spielernameAnzeige.style.display = "block";
         startSpiel();
     });
