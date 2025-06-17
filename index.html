@@ -268,8 +268,8 @@
           punkte++;
           punkteAnzeige.textContent = "Punkte: " + punkte;
           zeitung.remove();
-          geschwindigkeit += 0.05; // Leichte Erhöhung der Fallgeschwindigkeit
-          if (spawnRate > 250) spawnRate -= 20; // Stärkere Verkürzung der Spawn-Zeit
+          geschwindigkeit += 0.25; // Leichte Erhöhung der Fallgeschwindigkeit
+          if (spawnRate > 250) spawnRate -= 22; // Stärkere Verkürzung der Spawn-Zeit
           // Wichtig: Wir müssen den bestehenden Intervall stoppen und mit der neuen, schnelleren Rate neu starten
           clearInterval(spawnInterval);
           spawnInterval = setInterval(erstelleZeitung, spawnRate);
@@ -298,7 +298,7 @@
       punkte = 0;
       leben = 3;
       geschwindigkeit = 3;
-      spawnRate = 1200;
+      spawnRate = 1300;
       
       aktuellerSpielerName = generiereNamen();
       spielernameAnzeige.textContent = `Viel Glück, ${aktuellerSpielerName}!`;
