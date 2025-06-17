@@ -75,7 +75,7 @@
       user-select: none;
     }
 
-    #punkte, #leben {
+    #punkte, #leben, #spielername-anzeige { /* NEU: spielername-anzeige hinzugefügt */
       position: absolute;
       top: 10px;
       font-size: 20px;
@@ -85,6 +85,15 @@
 
     #punkte {
       left: 10px;
+    }
+    
+    /* NEU: Styling für die Namensanzeige */
+    #spielername-anzeige {
+        left: 50%;
+        transform: translateX(-50%);
+        font-weight: normal;
+        font-size: 16px;
+        opacity: 0.8;
     }
 
     #leben {
@@ -136,6 +145,7 @@
     <div id="spieler" style="display: none;">🧺</div>
     <div id="punkte" style="display: none;">Punkte: 0</div>
     <div id="leben" style="display: none;">❤️❤️❤️</div>
+    <div id="spielername-anzeige" style="display: none;"></div>
     <div id="gameover">
       Spiel vorbei!<br>Punkte: <span id="endstand"></span><br>
       <button id="restartbutton">Erneut spielen</button>
@@ -155,38 +165,37 @@
     const startbutton = document.getElementById("startbutton");
     const restartbutton = document.getElementById("restartbutton");
     const ranglisteContainer = document.getElementById("ranglisteContainer");
+    const spielernameAnzeige = document.getElementById("spielername-anzeige"); // NEU
 
     let punkte = 0;
     let leben = 3;
-    let geschwindigkeit = 4;
-    let spawnRate = 900; // Etwas langsamerer Startwert für die Wellen
+    let geschwindigkeit = 3; // Leicht reduziert für den Start mit requestAnimationFrame
+    let spawnRate = 900;
     let spieleAktiv = false;
     let spawnInterval;
+    let aktuellerSpielerName = ''; // NEU: Variable für den Namen der aktuellen Runde
 
     // --- RANGISTEN-FUNKTIONEN ---
     const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbyfyb2NhgjB7HNhBTBZukdfM63-nDkxq6PKncbD25__Wo6mg3Q1ka-aTS4qJINbu0HE/exec';
 
+    // GEÄNDERT: Namen ohne Zahlen
     function generiereNamen() {
-        const adjektive = ["Flinke", "Listige", "Rasende", "Smarte", "Wilde", "Schlaue", "Eilige", "Witzige"];
-        const namen = ["Zeitungskatze", "Druckteufel", "Blattlaus", "Nachrichtengeist", "Zeilenfuchs", "Tintenmolch"];
-        const zahl = Math.floor(Math.random() * 100);
-        return adjektive[Math.floor(Math.random() * adjektive.length)] + namen[Math.floor(Math.random() * namen.length)] + zahl;
+        const adjektive = ["Flinke", "Listige", "Rasende", "Smarte", "Wilde", "Schlaue", "Eilige", "Witzige", "Mutige", "Geheime"];
+        const namen = ["Zeitungskatze", "Druckteufel", "Blattlaus", "Nachrichtengeist", "Zeilenfuchs", "Tintenmolch", "Headlinehase", "Textritter"];
+        return adjektive[Math.floor(Math.random() * adjektive.length)] + namen[Math.floor(Math.random() * namen.length)];
     }
 
+    // GEÄNDERT: Verwendet den zu Beginn generierten Namen
     async function speichereScore(neuerScore) {
         if (neuerScore === 0) return;
-        const name = generiereNamen();
+        const name = aktuellerSpielerName; // Verwendet den gespeicherten Namen
         try {
             await fetch(BACKEND_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                cache: 'no-cache',
+                method: 'POST', mode: 'no-cors', cache: 'no-cache',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: name, score: neuerScore }),
             });
-        } catch (error) {
-            console.error("Fehler beim Senden des Scores:", error);
-        }
+        } catch (error) { console.error("Fehler beim Senden des Scores:", error); }
         setTimeout(zeigeRangliste, 1000);
     }
 
@@ -233,27 +242,17 @@
       speichereScore(punkte);
     }
     
-    // *** NEUE FUNKTION ***
-    // Entscheidet, wie viele Zeitungen in einer Welle erscheinen
     function spawnWelle() {
         if (!spieleAktiv) return;
-
         let anzahl = 1;
-        // Ab 10 Punkten: 30% Chance auf 2 Zeitungen
-        if (punkte > 10 && Math.random() < 0.3) {
-            anzahl = 2;
-        }
-        // Ab 25 Punkten: zusätzliche 20% Chance auf 3 Zeitungen
-        if (punkte > 25 && Math.random() < 0.2) {
-            anzahl = 3;
-        }
-
+        if (punkte > 10 && Math.random() < 0.3) anzahl = 2;
+        if (punkte > 25 && Math.random() < 0.2) anzahl = 3;
         for (let i = 0; i < anzahl; i++) {
-            // Kleiner Zeitversatz, damit sie nicht perfekt übereinander spawnen
             setTimeout(erstelleZeitung, i * 150);
         }
     }
 
+    // GEÄNDERT: Nutzt jetzt requestAnimationFrame für flüssige Bewegungen
     function erstelleZeitung() {
       if (!spieleAktiv) return;
 
@@ -264,41 +263,47 @@
       spielbereich.appendChild(zeitung);
 
       let pos = -50;
-      const fallIntervall = setInterval(() => {
-        if (!spieleAktiv) {
-          zeitung.remove();
-          clearInterval(fallIntervall);
-          return;
+      
+      // Die neue Animations-Schleife
+      function fallAnimation() {
+        if (!spieleAktiv) { // Spiel wurde beendet, Animation stoppen
+            zeitung.remove();
+            return;
         }
+
         pos += geschwindigkeit;
         zeitung.style.top = pos + "px";
 
         const zeitungRect = zeitung.getBoundingClientRect();
         const spielerRect = spieler.getBoundingClientRect();
-        if (
-          zeitungRect.bottom >= spielerRect.top &&
-          zeitungRect.left < spielerRect.right &&
-          zeitungRect.right > spielerRect.left &&
-          zeitungRect.top < spielerRect.bottom
-        ) {
+
+        // Kollisionserkennung
+        if (zeitungRect.bottom >= spielerRect.top && zeitungRect.left < spielerRect.right && zeitungRect.right > spielerRect.left && zeitungRect.top < spielerRect.bottom) {
           punkte++;
           punkteAnzeige.textContent = "Punkte: " + punkte;
           zeitung.remove();
-          clearInterval(fallIntervall);
-          geschwindigkeit += 0.15;
-          if (spawnRate > 300) spawnRate -= 15; // Etwas stärkere Verringerung
+          geschwindigkeit += 0.1; // Kleinere Anpassung, da es jetzt flüssiger ist
+          if (spawnRate > 300) spawnRate -= 10;
+          return; // Animation für diese Zeitung beenden
         }
         
+        // Zeitung unten rausgefallen
         if (pos > spielbereich.clientHeight) {
           zeitung.remove();
-          clearInterval(fallIntervall);
           leben--;
           updateLeben();
           if (leben <= 0) {
             spielBeenden();
           }
+          return; // Animation für diese Zeitung beenden
         }
-      }, 20);
+
+        // Nächsten Frame anfordern
+        requestAnimationFrame(fallAnimation);
+      }
+      
+      // Starte die Animation
+      requestAnimationFrame(fallAnimation);
     }
 
     function startSpiel() {
@@ -307,15 +312,17 @@
       spieleAktiv = true;
       punkte = 0;
       leben = 3;
-      geschwindigkeit = 4;
+      geschwindigkeit = 3;
       spawnRate = 900;
-
+      
+      // NEU: Name wird beim Spielstart generiert und angezeigt
+      aktuellerSpielerName = generiereNamen();
+      spielernameAnzeige.textContent = `Viel Glück, ${aktuellerSpielerName}!`;
+      
       punkteAnzeige.textContent = "Punkte: 0";
       updateLeben();
       gameoverAnzeige.style.display = "none";
       
-      // *** GEÄNDERT ***
-      // Ruft jetzt die neue spawnWelle-Funktion auf
       spawnInterval = setInterval(spawnWelle, spawnRate);
     }
 
@@ -324,11 +331,14 @@
       spieler.style.display = "block";
       punkteAnzeige.style.display = "block";
       lebenAnzeige.style.display = "block";
+      spielernameAnzeige.style.display = "block"; // NEU
       startSpiel();
     });
 
     restartbutton.addEventListener("click", () => {
-      startSpiel();
+        // NEU: Namensanzeige auch beim Neustart anzeigen
+        spielernameAnzeige.style.display = "block";
+        startSpiel();
     });
 
     document.addEventListener('DOMContentLoaded', zeigeRangliste);
