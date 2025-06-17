@@ -268,8 +268,8 @@
           punkte++;
           punkteAnzeige.textContent = "Punkte: " + punkte;
           zeitung.remove();
-          geschwindigkeit += 0.25; // Leichte Erhöhung der Fallgeschwindigkeit
-          if (spawnRate > 250) spawnRate -= 22; // Stärkere Verkürzung der Spawn-Zeit
+          geschwindigkeit += 0.45; // Leichte Erhöhung der Fallgeschwindigkeit
+          if (spawnRate > 250) spawnRate -= 45; // Stärkere Verkürzung der Spawn-Zeit
           // Wichtig: Wir müssen den bestehenden Intervall stoppen und mit der neuen, schnelleren Rate neu starten
           clearInterval(spawnInterval);
           spawnInterval = setInterval(erstelleZeitung, spawnRate);
