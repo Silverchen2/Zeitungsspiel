@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Zeitung fangen!</title>
   <style>
     body {
@@ -11,17 +11,22 @@
       background: radial-gradient(ellipse at center, rgba(100, 120, 180, 0.2), rgba(30, 30, 60, 0.3));
       overflow: hidden;
       color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
     }
+
     #spielbereich {
       position: relative;
       width: 600px;
       height: 400px;
       overflow: hidden;
-      margin: 40px auto;
+      margin: 40px auto 20px auto;
       border: 2px solid white;
       border-radius: 10px;
       background: radial-gradient(ellipse at center, rgba(100, 120, 180, 0.2), rgba(30, 30, 60, 0.15));
     }
+
     #startscreen {
       position: absolute;
       width: 100%;
@@ -34,11 +39,13 @@
       text-align: center;
       z-index: 2;
     }
+
     #startscreen h1 {
       font-size: 28px;
       margin-bottom: 20px;
       max-width: 80%;
     }
+
     #startbutton, #restartbutton {
       padding: 12px 24px;
       font-size: 18px;
@@ -49,6 +56,7 @@
       cursor: pointer;
       margin-top: 10px;
     }
+
     #spieler {
       position: absolute;
       bottom: 10px;
@@ -58,6 +66,7 @@
       pointer-events: none;
       user-select: none;
     }
+
     .zeitung {
       position: absolute;
       top: -50px;
@@ -65,6 +74,7 @@
       pointer-events: none;
       user-select: none;
     }
+
     #punkte, #leben {
       position: absolute;
       top: 10px;
@@ -72,18 +82,21 @@
       font-weight: bold;
       user-select: none;
     }
+
     #punkte {
       left: 10px;
     }
+
     #leben {
       right: 10px;
     }
+
     #gameover {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      font-size: 20px;
+      font-size: 32px;
       font-weight: bold;
       background-color: rgba(255,255,255,0.95);
       color: black;
@@ -94,18 +107,22 @@
       z-index: 3;
       text-align: center;
       user-select: none;
-      max-width: 90%;
-      max-height: 80%;
-      overflow-y: auto;
     }
-    #rangliste {
-      margin-top: 10px;
-      color: black;
+    
+    #ranglisteContainer {
+      width: 600px;
       text-align: left;
     }
-    #rangliste ol {
-      padding-left: 20px;
-      margin: 0;
+    #ranglisteContainer h3 {
+      margin-bottom: 5px;
+    }
+    #ranglisteContainer ol {
+      padding-left: 30px;
+      background-color: rgba(0,0,50,0.2);
+      border-radius: 5px;
+      padding-top: 10px;
+      padding-bottom: 10px;
+      min-height: 50px; /* Verhindert "springen" beim Laden */
     }
   </style>
 </head>
@@ -120,176 +137,186 @@
     <div id="punkte" style="display: none;">Punkte: 0</div>
     <div id="leben" style="display: none;">❤️❤️❤️</div>
     <div id="gameover">
-      <div>Spiel vorbei!<br>Punkte: <span id="endstand"></span></div>
-      <div id="rangliste"><strong>Top 5 Spieler:innen:</strong><ol></ol></div>
+      Spiel vorbei!<br>Punkte: <span id="endstand"></span><br>
       <button id="restartbutton">Erneut spielen</button>
     </div>
   </div>
 
-<script>
-  const spielbereich = document.getElementById("spielbereich");
-  const spieler = document.getElementById("spieler");
-  const punkteAnzeige = document.getElementById("punkte");
-  const lebenAnzeige = document.getElementById("leben");
-  const gameoverAnzeige = document.getElementById("gameover");
-  const endstand = document.getElementById("endstand");
-  const startscreen = document.getElementById("startscreen");
-  const startbutton = document.getElementById("startbutton");
-  const restartbutton = document.getElementById("restartbutton");
-  const ranglisteOl = document.querySelector("#rangliste ol");
+  <div id="ranglisteContainer"></div>
 
-  // Dein Google Apps Script URL:
-  const googleScriptURL = "https://script.google.com/macros/s/AKfycbzrSuWG5K_ayANKdtrXztYh_piK-wvfWO1v0dAXn6lVCYeMhguBI2bAT48b_uckWCM4/exec";
+  <script>
+    const spielbereich = document.getElementById("spielbereich");
+    const spieler = document.getElementById("spieler");
+    const punkteAnzeige = document.getElementById("punkte");
+    const lebenAnzeige = document.getElementById("leben");
+    const gameoverAnzeige = document.getElementById("gameover");
+    const endstand = document.getElementById("endstand");
+    const startscreen = document.getElementById("startscreen");
+    const startbutton = document.getElementById("startbutton");
+    const restartbutton = document.getElementById("restartbutton");
+    const ranglisteContainer = document.getElementById("ranglisteContainer");
 
-  let punkte = 0;
-  let leben = 3;
-  let geschwindigkeit = 4;
-  let spawnRate = 800;
-  let spieleAktiv = false;
+    let punkte = 0;
+    let leben = 3;
+    let geschwindigkeit = 4;
+    let spawnRate = 800;
+    let spieleAktiv = false;
+    let spawnInterval;
 
-  // Zufälliger Name-Generator (für Score-Einträge)
-  function generiereNamen() {
-    const adjektive = [
-      "Flinke", "Listige", "Lautlose", "Rasende", "Neugierige", "Schnüffelnde", "Unermüdliche", "Tippende",
-      "Wachsame", "Geheime", "Eilige", "Witzige", "Smarte", "Taktische", "Wilde", "Schlaue", "Mutige", "Verschnupfte",
-      "Tintenreiche", "Verwirrte", "Nostalgische", "Retrohafte", "Analoge", "Digitale", "Kritische", "Gewitzte"
-    ];
-    const namen = [
-      "Zeitungskatze", "Druckteufel", "Blattlaus", "Nachrichtengeist", "Spaltengeist", "Zeilenfuchs", "Tintenmolch",
-      "Presseeule", "Kolumnenkobold", "Layoutgeist", "Schlagzeilenhai", "Artikelkrake", "Textritter",
-      "Anzeigenwichtel", "Druckdrache", "Redaktionskrabbe", "Lesemurmeltier", "Papiergeist", "Headlinehase",
-      "Formatferkel", "Satzspinne", "Archivgnom", "Rollenhamster"
-    ];
-    const zahl = Math.floor(Math.random() * 100);
-    return `${adjektive[Math.floor(Math.random() * adjektive.length)]}${namen[Math.floor(Math.random() * namen.length)]}${zahl}`;
-  }
+    // --- RANGISTEN-FUNKTIONEN (mit deiner URL) ---
 
-  document.addEventListener("mousemove", (e) => {
-    if (!spieleAktiv) return;
-    const rect = spielbereich.getBoundingClientRect();
-    let x = e.clientX - rect.left;
-    x = Math.max(0, Math.min(x, rect.width));
-    spieler.style.left = x + "px";
-  });
+    // HIER IST DEINE PERSÖNLICHE URL EINGEFÜGT
+    const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbyfyb2NhgjB7HNhBTBZukdfM63-nDkxq6PKncbD25__Wo6mg3Q1ka-aTS4qJINbu0HE/exec';
 
-  function updateLeben() {
-    lebenAnzeige.textContent = "❤️".repeat(leben);
-  }
+    function generiereNamen() {
+        const adjektive = ["Flinke", "Listige", "Rasende", "Smarte", "Wilde", "Schlaue", "Eilige", "Witzige"];
+        const namen = ["Zeitungskatze", "Druckteufel", "Blattlaus", "Nachrichtengeist", "Zeilenfuchs", "Tintenmolch"];
+        const zahl = Math.floor(Math.random() * 100);
+        return adjektive[Math.floor(Math.random() * adjektive.length)] + namen[Math.floor(Math.random() * namen.length)] + zahl;
+    }
 
-  function erstelleZeitung() {
-    if (!spieleAktiv) return;
-    const zeitung = document.createElement("div");
-    zeitung.classList.add("zeitung");
-    zeitung.textContent = "🗞️";
-    zeitung.style.left = Math.random() * (spielbereich.clientWidth - 40) + "px";
-    spielbereich.appendChild(zeitung);
-
-    let pos = -50;
-    const fallIntervall = setInterval(() => {
-      if (!spieleAktiv) {
-        zeitung.remove();
-        clearInterval(fallIntervall);
-        return;
-      }
-      pos += geschwindigkeit;
-      zeitung.style.top = pos + "px";
-
-      const zeitungRect = zeitung.getBoundingClientRect();
-      const spielerRect = spieler.getBoundingClientRect();
-
-      if (
-        zeitungRect.bottom >= spielerRect.top &&
-        zeitungRect.left < spielerRect.right &&
-        zeitungRect.right > spielerRect.left
-      ) {
-        punkte++;
-        punkteAnzeige.textContent = "Punkte: " + punkte;
-        zeitung.remove();
-        clearInterval(fallIntervall);
-        geschwindigkeit += 0.25;
-        if (spawnRate > 200) spawnRate -= 10;
-      }
-
-      if (pos > spielbereich.clientHeight) {
-        zeitung.remove();
-        clearInterval(fallIntervall);
-        leben--;
-        updateLeben();
-        if (leben <= 0) {
-          spielBeenden();
+    async function speichereScore(neuerScore) {
+        if (neuerScore === 0) return;
+        const name = generiereNamen();
+        try {
+            await fetch(BACKEND_URL, {
+                method: 'POST',
+                // Google Apps Script leitet Anfragen um, was zu CORS-Problemen führen kann.
+                // 'no-cors' ist ein Workaround, der das Senden erlaubt, aber keine Antwort empfängt.
+                // Das ist okay, da wir die Liste danach sowieso neu laden.
+                mode: 'no-cors',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ name: name, score: neuerScore }),
+            });
+        } catch (error) {
+            console.error("Fehler beim Senden des Scores:", error);
         }
-      }
-    }, 20);
-  }
-
-  function spawnLoop() {
-    if (!spieleAktiv) return;
-    let maxZeitungen = Math.min(1 + Math.floor(punkte / 1), 1);
-    const anzahl = Math.floor(Math.random() * maxZeitungen) + 1;
-    for (let i = 0; i < anzahl; i++) {
-      erstelleZeitung();
+        // Kurze Pause geben, damit Google Sheet Zeit hat, die Daten zu verarbeiten
+        setTimeout(zeigeRangliste, 500); 
     }
-    setTimeout(spawnLoop, spawnRate);
-  }
 
-  function startSpiel() {
-    spieleAktiv = true;
-    punkte = 0;
-    leben = 3;
-    geschwindigkeit = 4;
-    spawnRate = 800;
-    punkteAnzeige.textContent = "Punkte: 0";
-    updateLeben();
-    gameoverAnzeige.style.display = "none";
-    spawnLoop();
-  }
+    async function zeigeRangliste() {
+        try {
+            const response = await fetch(BACKEND_URL);
+            const daten = await response.json();
 
-  // Highscore laden von Google Script
-  async function ladeRangliste() {
-    try {
-      const res = await fetch(googleScriptURL);
-      if (!res.ok) throw new Error("Fehler beim Laden der Rangliste");
-      const daten = await res.json();
-      return daten.sort((a, b) => b.score - a.score).slice(0, 5);
-    } catch (e) {
-      console.error(e);
-      return [];
+            if (daten.length === 0) {
+                ranglisteContainer.innerHTML = "<h3>📰 Globale Rangliste</h3><p>Sei der Erste, der einen Platz erobert!</p>";
+                return;
+            }
+
+            const listenEintraege = daten.map(e => `<li>${e.name}: ${e.score} Punkte</li>`).join("");
+            ranglisteContainer.innerHTML = `<h3>📰 Globale Rangliste (Top 10)</h3><ol>${listenEintraege}</ol>`;
+        } catch (error) {
+            console.error("Fehler beim Laden der Rangliste:", error);
+            ranglisteContainer.innerHTML = "<h3>📰 Globale Rangliste</h3><p>Konnte die Rangliste nicht laden.</p>";
+        }
     }
-  }
+    
+    // --- SPIEL-FUNKTIONEN ---
 
-  // Highscore speichern via Google Script
-  async function speichereScore(score) {
-    const name = generiereNamen();
-    try {
-      await fetch(googleScriptURL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, score })
-      });
-    } catch (e) {
-      console.error("Fehler beim Speichern:", e);
+    document.addEventListener("mousemove", (e) => {
+      if (!spieleAktiv) return;
+      const rect = spielbereich.getBoundingClientRect();
+      let x = e.clientX - rect.left;
+      x = Math.max(spieler.clientWidth / 2, Math.min(x, rect.width - spieler.clientWidth / 2));
+      spieler.style.left = x + "px";
+    });
+
+    function updateLeben() {
+      lebenAnzeige.textContent = "❤️".repeat(Math.max(0, leben));
     }
-  }
 
-  async function zeigeRangliste() {
-    const daten = await ladeRangliste();
-    if (daten.length === 0) {
-      ranglisteOl.innerHTML = "<li>Keine Einträge</li>";
-      return;
+    function spielBeenden() {
+      spieleAktiv = false;
+      clearInterval(spawnInterval);
+      gameoverAnzeige.style.display = "block";
+      endstand.textContent = punkte;
+      speichereScore(punkte);
     }
-    ranglisteOl.innerHTML = daten
-      .map(e => `<li>${e.name}: ${e.score} Punkte</li>`)
-      .join("");
-  }
 
-  async function spielBeenden() {
-    spieleAktiv = false;
-    punkteAnzeige.textContent = "Punkte: " + punkte;
-    endstand.textContent = punkte;
-    gameoverAnzeige.style.display = "block";
-    await speichereScore(punkte);
-    await zeigeRangliste();
-  }
+    function erstelleZeitung() {
+      if (!spieleAktiv) return;
 
-  startbutton
+      const zeitung = document.createElement("div");
+      zeitung.classList.add("zeitung");
+      zeitung.textContent = "🗞️";
+      zeitung.style.left = Math.random() * (spielbereich.clientWidth - 40) + "px";
+      spielbereich.appendChild(zeitung);
 
+      let pos = -50;
+      const fallIntervall = setInterval(() => {
+        if (!spieleAktiv) {
+          zeitung.remove();
+          clearInterval(fallIntervall);
+          return;
+        }
+        pos += geschwindigkeit;
+        zeitung.style.top = pos + "px";
+
+        const zeitungRect = zeitung.getBoundingClientRect();
+        const spielerRect = spieler.getBoundingClientRect();
+        if (
+          zeitungRect.bottom >= spielerRect.top &&
+          zeitungRect.left < spielerRect.right &&
+          zeitungRect.right > spielerRect.left &&
+          zeitungRect.top < spielerRect.bottom
+        ) {
+          punkte++;
+          punkteAnzeige.textContent = "Punkte: " + punkte;
+          zeitung.remove();
+          clearInterval(fallIntervall);
+          geschwindigkeit += 0.15;
+          if (spawnRate > 300) spawnRate -= 10;
+        }
+        
+        if (pos > spielbereich.clientHeight) {
+          zeitung.remove();
+          clearInterval(fallIntervall);
+          leben--;
+          updateLeben();
+          if (leben <= 0) {
+            spielBeenden();
+          }
+        }
+      }, 20);
+    }
+
+    function startSpiel() {
+      document.querySelectorAll('.zeitung').forEach(z => z.remove());
+      
+      spieleAktiv = true;
+      punkte = 0;
+      leben = 3;
+      geschwindigkeit = 4;
+      spawnRate = 800;
+
+      punkteAnzeige.textContent = "Punkte: 0";
+      updateLeben();
+      gameoverAnzeige.style.display = "none";
+      
+      spawnInterval = setInterval(() => {
+        if (!spieleAktiv) return;
+        erstelleZeitung();
+      }, spawnRate);
+    }
+
+    startbutton.addEventListener("click", () => {
+      startscreen.style.display = "none";
+      spieler.style.display = "block";
+      punkteAnzeige.style.display = "block";
+      lebenAnzeige.style.display = "block";
+      startSpiel();
+    });
+
+    restartbutton.addEventListener("click", () => {
+      startSpiel();
+    });
+
+    // Zeige die Rangliste direkt beim Laden der Seite
+    document.addEventListener('DOMContentLoaded', zeigeRangliste);
+  </script>
+</body>
+</html>
