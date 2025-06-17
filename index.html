@@ -263,5 +263,68 @@
 </html>
 
   </script>
+<script>
+  const ranglisteContainer = document.createElement("div");
+  ranglisteContainer.style.margin = "20px auto";
+  ranglisteContainer.style.width = "800px";
+  ranglisteContainer.style.fontFamily = "sans-serif";
+  ranglisteContainer.style.textAlign = "left";
+  document.body.appendChild(ranglisteContainer);
+
+ function generiereNamen() {
+  const adjektive = [
+    "Flinke", "Listige", "Lautlose", "Rasende", "Neugierige", "Schnüffelnde", "Unermüdliche", "Tippende",
+    "Wachsame", "Geheime", "Eilige", "Witzige", "Smarte", "Taktische", "Wilde", "Schlaue", "Mutige", "Verschnupfte",
+    "Tintenreiche", "Verwirrte", "Nostalgische", "Retrohafte", "Analoge", "Digitale", "Kritische", "Gewitzte"
+  ];
+
+  const namen = [
+    "Zeitungskatze", "Druckteufel", "Blattlaus", "Nachrichtengeist", "Spaltengeist", "Zeilenfuchs", "Tintenmolch",
+    "Presseeule", "Kolumnenkobold", "Layoutgeist", "Kioskschatten", "Schlagzeilenhai", "Artikelkrake", "Textritter",
+    "Anzeigenwichtel", "Druckdrache", "Redaktionskrabbe", "Lesemurmeltier", "Papiergeist", "Headlinehase",
+    "Formatferkel", "Satzspinne", "Archivgnom", "Rollenhamster", "Klickkobold", "Scrollkrake", "Feuilletonfuchs"
+  ];
+
+  const zahl = Math.floor(Math.random() * 100);
+  const name = `${adjektive[Math.floor(Math.random() * adjektive.length)]}${namen[Math.floor(Math.random() * namen.length)]}${zahl}`;
+  return name;
+}
+
+  }
+
+  function ladeRangliste() {
+    const daten = JSON.parse(localStorage.getItem("zeitungsHighscores")) || [];
+    return daten.sort((a, b) => b.score - a.score).slice(0, 5);
+  }
+
+  function speichereScore(score) {
+    const name = generiereNamen();
+    const daten = ladeRangliste();
+    daten.push({ name, score });
+    localStorage.setItem("zeitungsHighscores", JSON.stringify(daten));
+    zeigeRangliste();
+  }
+
+  function zeigeRangliste() {
+    const daten = ladeRangliste();
+    ranglisteContainer.innerHTML = "<h3>📰 Top 5 Leser:innen</h3><ol>" +
+      daten.map(e => `<li>${e.name}: ${e.score} Punkte</li>`).join("") +
+      "</ol>";
+  }
+
+  // Zeige Rangliste beim Start
+  zeigeRangliste();
+
+  // Ergänze gameover-Funktion
+  function gameOverMitRangliste() {
+    spieleAktiv = false;
+    gameover.style.display = "block";
+    speichereScore(punkte);
+  }
+
+  // Ersetze im Spielcode an der Stelle `spieleAktiv = false; gameover.style.display = "block";` durch:
+  // --> gameOverMitRangliste();
+</script>
+
 </body>
 </html>
