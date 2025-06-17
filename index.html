@@ -122,7 +122,7 @@
       border-radius: 5px;
       padding-top: 10px;
       padding-bottom: 10px;
-      min-height: 50px; /* Verhindert "springen" beim Laden */
+      min-height: 50px;
     }
   </style>
 </head>
@@ -159,13 +159,11 @@
     let punkte = 0;
     let leben = 3;
     let geschwindigkeit = 4;
-    let spawnRate = 800;
+    let spawnRate = 900; // Etwas langsamerer Startwert für die Wellen
     let spieleAktiv = false;
     let spawnInterval;
 
-    // --- RANGISTEN-FUNKTIONEN (mit deiner URL) ---
-
-    // HIER IST DEINE PERSÖNLICHE URL EINGEFÜGT
+    // --- RANGISTEN-FUNKTIONEN ---
     const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbyfyb2NhgjB7HNhBTBZukdfM63-nDkxq6PKncbD25__Wo6mg3Q1ka-aTS4qJINbu0HE/exec';
 
     function generiereNamen() {
@@ -181,32 +179,30 @@
         try {
             await fetch(BACKEND_URL, {
                 method: 'POST',
-                // Google Apps Script leitet Anfragen um, was zu CORS-Problemen führen kann.
-                // 'no-cors' ist ein Workaround, der das Senden erlaubt, aber keine Antwort empfängt.
-                // Das ist okay, da wir die Liste danach sowieso neu laden.
                 mode: 'no-cors',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                cache: 'no-cache',
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name: name, score: neuerScore }),
             });
         } catch (error) {
             console.error("Fehler beim Senden des Scores:", error);
         }
-        // Kurze Pause geben, damit Google Sheet Zeit hat, die Daten zu verarbeiten
-        setTimeout(zeigeRangliste, 500); 
+        setTimeout(zeigeRangliste, 1000);
     }
 
     async function zeigeRangliste() {
         try {
-            const response = await fetch(BACKEND_URL);
+            const response = await fetch(BACKEND_URL); 
             const daten = await response.json();
-
+            if (daten.status === 'error') {
+                 console.error("Fehler vom Google Script:", daten.message);
+                 ranglisteContainer.innerHTML = "<h3>📰 Globale Rangliste</h3><p>Ein Fehler ist im Backend aufgetreten.</p>";
+                 return;
+            }
             if (daten.length === 0) {
                 ranglisteContainer.innerHTML = "<h3>📰 Globale Rangliste</h3><p>Sei der Erste, der einen Platz erobert!</p>";
                 return;
             }
-
             const listenEintraege = daten.map(e => `<li>${e.name}: ${e.score} Punkte</li>`).join("");
             ranglisteContainer.innerHTML = `<h3>📰 Globale Rangliste (Top 10)</h3><ol>${listenEintraege}</ol>`;
         } catch (error) {
@@ -235,6 +231,27 @@
       gameoverAnzeige.style.display = "block";
       endstand.textContent = punkte;
       speichereScore(punkte);
+    }
+    
+    // *** NEUE FUNKTION ***
+    // Entscheidet, wie viele Zeitungen in einer Welle erscheinen
+    function spawnWelle() {
+        if (!spieleAktiv) return;
+
+        let anzahl = 1;
+        // Ab 10 Punkten: 30% Chance auf 2 Zeitungen
+        if (punkte > 10 && Math.random() < 0.3) {
+            anzahl = 2;
+        }
+        // Ab 25 Punkten: zusätzliche 20% Chance auf 3 Zeitungen
+        if (punkte > 25 && Math.random() < 0.2) {
+            anzahl = 3;
+        }
+
+        for (let i = 0; i < anzahl; i++) {
+            // Kleiner Zeitversatz, damit sie nicht perfekt übereinander spawnen
+            setTimeout(erstelleZeitung, i * 150);
+        }
     }
 
     function erstelleZeitung() {
@@ -269,7 +286,7 @@
           zeitung.remove();
           clearInterval(fallIntervall);
           geschwindigkeit += 0.15;
-          if (spawnRate > 300) spawnRate -= 10;
+          if (spawnRate > 300) spawnRate -= 15; // Etwas stärkere Verringerung
         }
         
         if (pos > spielbereich.clientHeight) {
@@ -291,16 +308,15 @@
       punkte = 0;
       leben = 3;
       geschwindigkeit = 4;
-      spawnRate = 800;
+      spawnRate = 900;
 
       punkteAnzeige.textContent = "Punkte: 0";
       updateLeben();
       gameoverAnzeige.style.display = "none";
       
-      spawnInterval = setInterval(() => {
-        if (!spieleAktiv) return;
-        erstelleZeitung();
-      }, spawnRate);
+      // *** GEÄNDERT ***
+      // Ruft jetzt die neue spawnWelle-Funktion auf
+      spawnInterval = setInterval(spawnWelle, spawnRate);
     }
 
     startbutton.addEventListener("click", () => {
@@ -315,7 +331,6 @@
       startSpiel();
     });
 
-    // Zeige die Rangliste direkt beim Laden der Seite
     document.addEventListener('DOMContentLoaded', zeigeRangliste);
   </script>
 </body>
