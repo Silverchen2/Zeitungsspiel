@@ -169,12 +169,10 @@
     let punkte = 0;
     let leben = 3;
     let geschwindigkeit = 3;
-    let spawnRate = 1200; // Etwas höherer Startwert, da es direkt losgeht
+    let spawnRate = 1200;
     let spieleAktiv = false;
-    let spawnInterval;
     let aktuellerSpielerName = '';
 
-    // --- RANGISTEN-FUNKTIONEN ---
     const BACKEND_URL = 'https://script.google.com/macros/s/AKfycbyfyb2NhgjB7HNhBTBZukdfM63-nDkxq6PKncbD25__Wo6mg3Q1ka-aTS4qJINbu0HE/exec';
 
     function generiereNamen() {
@@ -217,8 +215,6 @@
         }
     }
     
-    // --- SPIEL-FUNKTIONEN ---
-
     document.addEventListener("mousemove", (e) => {
       if (!spieleAktiv) return;
       const rect = spielbereich.getBoundingClientRect();
@@ -233,14 +229,13 @@
 
     function spielBeenden() {
       spieleAktiv = false;
-      clearInterval(spawnInterval);
+      // Der spawnLoop stoppt automatisch, da spieleAktiv = false ist.
       gameoverAnzeige.style.display = "block";
       endstand.textContent = punkte;
       speichereScore(punkte);
     }
     
-    // Die Funktion erstelleZeitung bleibt gleich und nutzt weiterhin
-    // requestAnimationFrame für eine flüssige Bewegung.
+    // GEÄNDERT: Die Logik zum Beschleunigen ist jetzt viel einfacher.
     function erstelleZeitung() {
       if (!spieleAktiv) return;
 
@@ -257,7 +252,6 @@
             zeitung.remove();
             return;
         }
-
         pos += geschwindigkeit;
         zeitung.style.top = pos + "px";
 
@@ -268,11 +262,9 @@
           punkte++;
           punkteAnzeige.textContent = "Punkte: " + punkte;
           zeitung.remove();
-          geschwindigkeit += 0.45; // Leichte Erhöhung der Fallgeschwindigkeit
-          if (spawnRate > 250) spawnRate -= 45; // Stärkere Verkürzung der Spawn-Zeit
-          // Wichtig: Wir müssen den bestehenden Intervall stoppen und mit der neuen, schnelleren Rate neu starten
-          clearInterval(spawnInterval);
-          spawnInterval = setInterval(erstelleZeitung, spawnRate);
+          geschwindigkeit += 0.05;
+          // Die Spawnrate wird nur noch hier verringert. Der Loop nutzt sie automatisch.
+          if (spawnRate > 250) spawnRate -= 20; 
           return;
         }
         
@@ -290,7 +282,19 @@
       requestAnimationFrame(fallAnimation);
     }
 
-    // Die startSpiel-Funktion wird wieder vereinfacht.
+    // NEU: Der "intelligente" Spawn Loop, der setInterval ersetzt
+    function spawnLoop() {
+        if (!spieleAktiv) {
+            return; // Stoppt den Loop, wenn das Spiel vorbei ist
+        }
+        
+        // Erstelle eine Zeitung
+        erstelleZeitung();
+        
+        // Plane den nächsten Aufruf dieser Funktion nach der aktuellen spawnRate
+        setTimeout(spawnLoop, spawnRate);
+    }
+
     function startSpiel() {
       document.querySelectorAll('.zeitung').forEach(z => z.remove());
       
@@ -298,7 +302,7 @@
       punkte = 0;
       leben = 3;
       geschwindigkeit = 3;
-      spawnRate = 1300;
+      spawnRate = 1200;
       
       aktuellerSpielerName = generiereNamen();
       spielernameAnzeige.textContent = `Viel Glück, ${aktuellerSpielerName}!`;
@@ -307,10 +311,8 @@
       updateLeben();
       gameoverAnzeige.style.display = "none";
       
-      // GEÄNDERT: Stoppt den alten Intervall (falls vorhanden) und startet den neuen
-      // Es wird jetzt direkt wieder erstelleZeitung aufgerufen
-      clearInterval(spawnInterval);
-      spawnInterval = setInterval(erstelleZeitung, spawnRate);
+      // GEÄNDERT: setInterval wird entfernt. Stattdessen wird der Loop einmal gestartet.
+      spawnLoop(); 
     }
 
     startbutton.addEventListener("click", () => {
